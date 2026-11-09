@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   build:
+    name: Build Barbaross IDE and Runtime
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +28,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
       - name: Install Android SDK packages
         run: |
@@ -38,15 +41,23 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Extract project
+        shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/barbaross-src"
+
           unzip -q barbaross-stage1.zip \
             -d "$RUNNER_TEMP/barbaross-src"
 
-          test -f "$RUNNER_TEMP/barbaross-src/barbaross/gradlew"
+          if [ ! -f "$RUNNER_TEMP/barbaross-src/barbaross/gradlew" ]; then
+            echo "ERROR: gradlew not found!"
+            echo "ZIP structure:"
+            find "$RUNNER_TEMP/barbaross-src" -maxdepth 3 -type f | head -100
+            exit 1
+          fi
 
-      - name: Run tests and build both APKs
+      - name: Build and test project
         working-directory: ${{ runner.temp }}/barbaross-src/barbaross
+        shell: bash
         run: |
           chmod +x gradlew
 
@@ -54,6 +65,21 @@ jobs:
             :ipc:testDebugUnitTest \
             :ide:assembleDebug \
             :runtime:assembleDebug
+
+      - name: Verify APK files
+        shell: bash
+        run: |
+          IDE_APK="$RUNNER_TEMP/barbaross-src/barbaross/ide/build/outputs/apk/debug"
+          RUNTIME_APK="$RUNNER_TEMP/barbaross-src/barbaross/runtime/build/outputs/apk/debug"
+
+          echo "Checking IDE APK..."
+          find "$IDE_APK" -name "*.apk" -type f
+
+          echo "Checking Runtime APK..."
+          find "$RUNTIME_APK" -name "*.apk" -type f
+
+          test -n "$(find "$IDE_APK" -name '*.apk' -type f -print -quit)"
+          test -n "$(find "$RUNTIME_APK" -name '*.apk' -type f -print -quit)"
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
