@@ -1,0 +1,322 @@
+BARBAROSS STAGE 1 AUDIT
+Archive size: 66437
+SHA256: 781fcab207d947f6d491e6217ff124a856efe78b1572de493493b4b1a14300f7
+
+Extracted files: 25
+FILE TREE
+barbaross/.github/workflows/build.yml (791 bytes)
+barbaross/.gitignore (73 bytes)
+barbaross/build.gradle.kts (222 bytes)
+barbaross/docs/PLAN.md (5916 bytes)
+barbaross/gradle/libs.versions.toml (2054 bytes)
+barbaross/gradle/wrapper/gradle-wrapper.jar (43764 bytes)
+barbaross/gradle/wrapper/gradle-wrapper.properties (253 bytes)
+barbaross/gradle.properties (182 bytes)
+barbaross/gradlew (8733 bytes)
+barbaross/gradlew.bat (2937 bytes)
+barbaross/ide/build.gradle.kts (1262 bytes)
+barbaross/ide/src/main/AndroidManifest.xml (1197 bytes)
+barbaross/ide/src/main/kotlin/dev/barbaross/ide/MainActivity.kt (4681 bytes)
+barbaross/ide/src/main/kotlin/dev/barbaross/ide/runtime/RuntimeClient.kt (3545 bytes)
+barbaross/ipc/build.gradle.kts (427 bytes)
+barbaross/ipc/src/main/AndroidManifest.xml (111 bytes)
+barbaross/ipc/src/main/kotlin/dev/barbaross/ipc/BuildProtocol.kt (1420 bytes)
+barbaross/ipc/src/main/kotlin/dev/barbaross/ipc/IBuildService.kt (4535 bytes)
+barbaross/ipc/src/test/kotlin/dev/barbaross/ipc/BuildProtocolTest.kt (553 bytes)
+barbaross/runtime/build.gradle.kts (692 bytes)
+barbaross/runtime/src/main/AndroidManifest.xml (1442 bytes)
+barbaross/runtime/src/main/kotlin/dev/barbaross/runtime/BuildService.kt (721 bytes)
+barbaross/runtime/src/main/kotlin/dev/barbaross/runtime/RuntimeStatusActivity.kt (1520 bytes)
+barbaross/runtime/src/main/kotlin/dev/barbaross/runtime/ToolchainInspector.kt (966 bytes)
+barbaross/settings.gradle.kts (537 bytes)
+
+BUILD CONFIGURATION
+
+FILE: barbaross/build.gradle.kts
+plugins {
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+}
+
+
+FILE: barbaross/gradle/libs.versions.toml
+# ВАЖНО: версии выбраны по документации developer.android.com (поиск, ноябрь 2026),
+# но НЕ проверены сборкой: Google Maven в среде разработки недоступен.
+# Проверка выполняется в CI (.github/workflows/build.yml). См. docs/PLAN.md.
+# AGP 8.13 + Gradle 8.14.3 выбраны осознанно; миграция на AGP 9.x (требует Gradle 9.4.1
+# и меняет модель Kotlin/DSL) вынесена в отдельный шаг.
+[versions]
+agp = "8.13.0"
+kotlin = "2.2.10"
+composeBom = "2026.09.00"
+activityCompose = "1.11.0"
+coreKtx = "1.17.0"
+lifecycle = "2.9.4"
+coroutines = "1.10.2"
+junit = "4.13.2"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+
+FILE: barbaross/gradle/wrapper/gradle-wrapper.properties
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.14.3-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+
+
+FILE: barbaross/gradle.properties
+org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+org.gradle.caching=true
+org.gradle.parallel=true
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+kotlin.code.style=official
+
+
+FILE: barbaross/ide/build.gradle.kts
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+}
+
+android {
+    namespace = "dev.barbaross.ide"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "dev.barbaross.ide"
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 1
+        versionName = "0.1.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    implementation(project(":ipc"))
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.kotlinx.coroutines.android)
+
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.tooling)
+
+    testImplementation(libs.junit)
+}
+
+
+FILE: barbaross/ide/src/main/AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Запрашиваем у системы нашу же signature-permission для bind к Build Runtime. -->
+    <uses-permission android:name="dev.barbaross.permission.BIND_BUILD_RUNTIME" />
+
+    <!-- Android 11+: видимость пакета Runtime для bindService. -->
+    <queries>
+        <package android:name="dev.barbaross.runtime" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="Barbaross IDE"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+
+
+FILE: barbaross/ipc/build.gradle.kts
+plugins {
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+}
+
+android {
+    namespace = "dev.barbaross.ipc"
+    compileSdk = 36
+
+    defaultConfig {
+        minSdk = 29
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    testImplementation(libs.junit)
+}
+
+
+FILE: barbaross/ipc/src/main/AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+
+
+FILE: barbaross/runtime/build.gradle.kts
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+}
+
+android {
+    namespace = "dev.barbaross.runtime"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "dev.barbaross.runtime"
+        minSdk = 29
+        targetSdk = 36
+        versionCode = 1
+        versionName = "0.1.0"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+dependencies {
+    implementation(project(":ipc"))
+    implementation(libs.androidx.core.ktx)
+}
+
+
+FILE: barbaross/runtime/src/main/AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Signature-permission: bind к сервису сборки разрешён только приложениям,
+        подписанным тем же ключом, что и Runtime (т.е. нашей IDE).
+        Обе APK обязаны подписываться одним ключом, иначе IDE не получит permission.
+    -->
+    <permission
+        android:name="dev.barbaross.permission.BIND_BUILD_RUNTIME"
+        android:protectionLevel="signature" />
+
+    <application
+        android:allowBackup="false"
+        android:label="Barbaross Build Runtime"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".RuntimeStatusActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".BuildService"
+            android:exported="true"
+            android:permission="dev.barbaross.permission.BIND_BUILD_RUNTIME">
+            <intent-filter>
+                <action android:name="dev.barbaross.runtime.action.BUILD_SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
+
+
+FILE: barbaross/settings.gradle.kts
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "barbaross"
+
+include(":ipc")      // общий IPC-контракт (AIDL) между IDE и Build Runtime
+include(":ide")      // приложение Barbaross IDE
+include(":runtime")  // приложение Barbaross Build Runtime
