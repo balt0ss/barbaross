@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Signature-permission: bind к сервису сборки разрешён только приложениям,
+        подписанным тем же ключом, что и Runtime (т.е. нашей IDE).
+        Обе APK обязаны подписываться одним ключом, иначе IDE не получит permission.
+    -->
+    <permission
+        android:name="dev.barbaross.permission.BIND_BUILD_RUNTIME"
+        android:protectionLevel="signature" />
+
+    <application
+        android:allowBackup="false"
+        android:label="Barbaross Build Runtime"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".RuntimeStatusActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".BuildService"
+            android:exported="true"
+            android:permission="dev.barbaross.permission.BIND_BUILD_RUNTIME">
+            <intent-filter>
+                <action android:name="dev.barbaross.runtime.action.BUILD_SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>
