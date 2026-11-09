@@ -1,0 +1,66 @@
+name: Barbaross Build
+
+on:
+  push:
+    paths:
+      - 'barbaross-stage1.zip'
+      - '.github/workflows/build.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Extract project
+        run: |
+          mkdir -p "$RUNNER_TEMP/barbaross-src"
+          unzip -q barbaross-stage1.zip \
+            -d "$RUNNER_TEMP/barbaross-src"
+
+          test -f "$RUNNER_TEMP/barbaross-src/barbaross/gradlew"
+
+      - name: Run tests and build both APKs
+        working-directory: ${{ runner.temp }}/barbaross-src/barbaross
+        run: |
+          chmod +x gradlew
+
+          ./gradlew --no-daemon \
+            :ipc:testDebugUnitTest \
+            :ide:assembleDebug \
+            :runtime:assembleDebug
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: barbaross-debug-apks
+          path: |
+            ${{ runner.temp }}/barbaross-src/barbaross/ide/build/outputs/apk/debug/*.apk
+            ${{ runner.temp }}/barbaross-src/barbaross/runtime/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
