@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Запрашиваем у системы нашу же signature-permission для bind к Build Runtime. -->
+    <uses-permission android:name="dev.barbaross.permission.BIND_BUILD_RUNTIME" />
+
+    <!-- Android 11+: видимость пакета Runtime для bindService. -->
+    <queries>
+        <package android:name="dev.barbaross.runtime" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="Barbaross IDE"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
