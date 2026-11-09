@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Barbaross IDE and Runtime
+    name: Build Barbaross IDE (single APK)
     runs-on: ubuntu-latest
 
     steps:
@@ -63,30 +63,32 @@ jobs:
 
           ./gradlew --no-daemon \
             :ipc:testDebugUnitTest \
-            :ide:assembleDebug \
-            :runtime:assembleDebug
+            :ide:assembleDebug
 
       - name: Verify APK files
         shell: bash
         run: |
-          IDE_APK="$RUNNER_TEMP/barbaross-src/barbaross/ide/build/outputs/apk/debug"
-          RUNTIME_APK="$RUNNER_TEMP/barbaross-src/barbaross/runtime/build/outputs/apk/debug"
+          SRC="$RUNNER_TEMP/barbaross-src/barbaross"
+          IDE_APK_DIR="$SRC/ide/build/outputs/apk/debug"
 
           echo "Checking IDE APK..."
-          find "$IDE_APK" -name "*.apk" -type f
+          find "$IDE_APK_DIR" -name "*.apk" -type f
+          APK=$(find "$IDE_APK_DIR" -name "*.apk" -type f)
+          test "$(echo "$APK" | wc -l)" -eq 1
 
-          echo "Checking Runtime APK..."
-          find "$RUNTIME_APK" -name "*.apk" -type f
+          echo "Checking that Runtime is merged into the IDE APK..."
+          AAPT=$(ls "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools/*/aapt2 | tail -1)
+          "$AAPT" dump xmltree --file AndroidManifest.xml "$APK" > "$RUNNER_TEMP/manifest.txt"
+          grep -q 'dev.barbaross.runtime.BuildService' "$RUNNER_TEMP/manifest.txt"
+          grep -q ':build' "$RUNNER_TEMP/manifest.txt"
 
-          test -n "$(find "$IDE_APK" -name '*.apk' -type f -print -quit)"
-          test -n "$(find "$RUNTIME_APK" -name '*.apk' -type f -print -quit)"
+          echo "Checking that no separate Runtime APK exists..."
+          test ! -d "$SRC/runtime/build/outputs/apk"
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: barbaross-debug-apks
-          path: |
-            ${{ runner.temp }}/barbaross-src/barbaross/ide/build/outputs/apk/debug/*.apk
-            ${{ runner.temp }}/barbaross-src/barbaross/runtime/build/outputs/apk/debug/*.apk
+          name: barbaross-debug-apk
+          path: ${{ runner.temp }}/barbaross-src/barbaross/ide/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
