@@ -65,22 +65,30 @@ jobs:
             :ipc:testDebugUnitTest \
             :ide:assembleDebug
 
+          mkdir -p "$RUNNER_TEMP/apks"
+          cp ide/build/outputs/apk/debug/ide-debug.apk "$RUNNER_TEMP/apks/barbaross-target36.apk"
+
+          # Экспериментальная копия: targetSdk 28, applicationId dev.barbaross.ide.t28 (ставится рядом).
+          ./gradlew --no-daemon -Pbarbaross.targetSdk=28 :ide:assembleDebug
+          cp ide/build/outputs/apk/debug/ide-debug.apk "$RUNNER_TEMP/apks/barbaross-target28.apk"
+
       - name: Verify APK files
         shell: bash
         run: |
           SRC="$RUNNER_TEMP/barbaross-src/barbaross"
-          IDE_APK_DIR="$SRC/ide/build/outputs/apk/debug"
+          IDE_APK_DIR="$RUNNER_TEMP/apks"
 
           echo "Checking IDE APK..."
           find "$IDE_APK_DIR" -name "*.apk" -type f
-          APK=$(find "$IDE_APK_DIR" -name "*.apk" -type f)
-          test "$(echo "$APK" | wc -l)" -eq 1
+          test "$(find "$IDE_APK_DIR" -name '*.apk' | wc -l)" -eq 2
+          APK="$IDE_APK_DIR/barbaross-target36.apk"
 
           echo "Checking that Runtime is merged into the IDE APK..."
           AAPT=$(ls "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools/*/aapt2 | tail -1)
           "$AAPT" dump xmltree --file AndroidManifest.xml "$APK" > "$RUNNER_TEMP/manifest.txt"
           grep -q 'dev.barbaross.runtime.BuildService' "$RUNNER_TEMP/manifest.txt"
           grep -q ':build' "$RUNNER_TEMP/manifest.txt"
+          "$AAPT" dump badging "$IDE_APK_DIR/barbaross-target28.apk" | grep -E "package:|targetSdkVersion"
 
           echo "Checking that no separate Runtime APK exists..."
           test ! -d "$SRC/runtime/build/outputs/apk"
@@ -88,7 +96,7 @@ jobs:
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: barbaross-debug-apk
-          path: ${{ runner.temp }}/barbaross-src/barbaross/ide/build/outputs/apk/debug/*.apk
+          name: barbaross-debug-apks
+          path: ${{ runner.temp }}/apks/*.apk
           if-no-files-found: error
           retention-days: 7
